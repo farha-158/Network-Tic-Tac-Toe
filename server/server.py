@@ -8,7 +8,23 @@ clients_waiting = []
 lock = threading.Lock()
 
 def print_board(board):
-    print(f"\n{board[0]}|{board[1]}|{board[2]}\n-+-+-\n{board[3]}|{board[4]}|{board[5]}\n-+-+-\n{board[6]}|{board[7]}|{board[8]}\n")
+    def cell(i):
+        return f"  {board[i] if board[i] != ' ' else ' '}  "
+    
+    line = "_____|_____|_____"
+    empty_line = "     |     |     "
+    
+    return (
+        f"\n{empty_line}\n"
+        f"{cell(0)}|{cell(1)}|{cell(2)}\n"
+        f"{line}\n"
+        f"{empty_line}\n"
+        f"{cell(3)}|{cell(4)}|{cell(5)}\n"
+        f"{line}\n"
+        f"{empty_line}\n"
+        f"{cell(6)}|{cell(7)}|{cell(8)}\n"
+        f"{empty_line}\n\n"
+    )
 
 def check_winner(board):
     combos = [
@@ -27,10 +43,9 @@ def handle_game(p1, p2):
     board = [" "] * 9
     turn = p1
     symbols = {p1: "X", p2: "O"}
-    players = {p1: "Player 1", p2: "Player 2"}
 
     for sock in [p1, p2]:
-        sock.send("Game start! You are {}\n".format(symbols[sock]).encode())
+        sock.send(f"Game start! You are {symbols[sock]}\n".encode())
 
     while True:
         try:
@@ -56,15 +71,16 @@ def handle_game(p1, p2):
             board[move] = symbols[current]
             winner = check_winner(board)
 
-            board_state = " ".join(board)
+            board_state = print_board(board)
             for sock in [p1, p2]:
-                sock.send(f"Board: {board_state}\n".encode())
+                sock.send(f"{board_state}\n".encode())
 
             if winner:
                 msg = f"Game over! Winner: {winner}\n"
                 for sock in [p1, p2]:
                     sock.send(msg.encode())
                     sock.close()
+                print(msg)
                 break
 
             turn = other
