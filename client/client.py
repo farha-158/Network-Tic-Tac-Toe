@@ -40,15 +40,35 @@ class client :
         except OSError as e:
             raise NetworkError(f"Unexpected network error: {e}")
     
-    def receive(self):    
-         while True:
-            try:
-                data = data.append(self.sock.recv(1024))
-                if not data:
-                    break
-                print(data)
-            except ConnectionRefusedError:
-                raise ConnectionFailedError("Server refused the connection or not found.")
-            except ValueError:
-                raise ReceiveDataError("data format error.")
-         return data
+    def receive(self):
+        try:
+            data = self.sock.recv(1024)
+            if not data:
+                return ""
+            return data.decode()
+        except (ConnectionResetError, ConnectionAbortedError):
+            print("Connection closed by server.")
+            return ""
+        except OSError as e:
+            raise NetworkError(f"Unexpected network error: {e}")
+
+
+def main():
+    c = client()
+    c.connect()
+    try:
+        while True:
+            response = c.receive()
+            if not response:
+                break
+            print(response.strip())
+            if "Your move" in response:
+                move = input("Enter your move (0-8): ")
+                c.send(move)
+    except KeyboardInterrupt:
+        print("\nDisconnected by user.")
+    finally:
+        c.close()
+
+if __name__ == "__main__":
+    main()
