@@ -1,6 +1,6 @@
 import os
 import socket
-from client.exceptions import *
+from exceptions import *
 from dotenv import load_dotenv
 
 class client :
