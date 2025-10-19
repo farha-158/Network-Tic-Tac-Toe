@@ -1,70 +1,56 @@
 import os
 import socket
-from exceptions import *
 from dotenv import load_dotenv
 
-class client :
+class Client:
     load_dotenv()
     SERVER_HOST = os.getenv("HOST", "127.0.0.1")
     SERVER_PORT = int(os.getenv("PORT", "5000"))
 
     def __init__(self):
         try:
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.server_address = (self.SERVER_HOST, self.SERVER_PORT)
         except (socket.timeout, socket.error) as e:
-            raise NetworkError(f"Unexpected network error: {e}")
+            print(f"Error creating socket: {e}")
+            raise
 
-    def connect(self, SERVER_HOST =SERVER_HOST, SERVER_PORT = SERVER_PORT):
+    def send(self, message):
         try:
-            self.sock.connect((SERVER_HOST, SERVER_PORT))
-        except ConnectionRefusedError:
-             raise ConnectionFailedError("Server refused the connection or not found.")
-        except TimeoutError:
-            raise TimeoutNetworkError("Connection attempt timed out.")
+            self.sock.sendto(message.encode(), self.server_address)
         except OSError as e:
-            raise NetworkError(f"Unexpected network error: {e}") 
-    
+            print(f"Send error: {e}")
+
+    def receive(self):
+        try:
+            data, _ = self.sock.recvfrom(4096)
+            return data.decode()
+        except OSError as e:
+            print(f"Receive error: {e}")
+            return ""
+
     def close(self):
         try:
             self.sock.close()
         except OSError as e:
-            raise NetworkError(f"Unexpected network error or alerady closed: {e}")
-        
-    def send(self, message):
-        try:
-             self.sock.send(message.encode())
-        except BrokenPipeError:
-            raise ConnectionLostError("Connection lost.")
-        except ValueError:
-            raise SendDataError("data format error.")
-        except OSError as e:
-            raise NetworkError(f"Unexpected network error: {e}")
-    
-    def receive(self):
-        try:
-            data = self.sock.recv(1024)
-            if not data:
-                return ""
-            return data.decode()
-        except (ConnectionResetError, ConnectionAbortedError):
-            print("Connection closed by server.")
-            return ""
-        except OSError as e:
-            raise NetworkError(f"Unexpected network error: {e}")
-
+            print(f"Socket close error: {e}")
 
 def main():
-    c = client()
-    c.connect()
+    c = Client()
+    # إرسال رسالة للانضمام للسيرفر
+    c.send("join")
+
     try:
         while True:
             response = c.receive()
             if not response:
                 break
-            print(response.strip())
+            print(response, end="")  # نطبعها كما هي للمحافظة على شكل اللعبة
+
             if "Your move" in response:
                 move = input("Enter your move (0-8): ")
                 c.send(move)
+
     except KeyboardInterrupt:
         print("\nDisconnected by user.")
     finally:
